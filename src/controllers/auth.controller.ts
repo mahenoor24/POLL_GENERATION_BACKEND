@@ -13,14 +13,12 @@ export const register = async (req: Request, res: Response) => {
   const { fullName, email, password, role } = req.body;
   const existing = await User.findOne({ email });
   if (existing) return res.status(400).json({ message: 'Email already exists' });
-
   const hashed = await bcrypt.hash(password, 10);
   const user = new User({
   fullName: req.body.fullName,
   email: req.body.email,
   password: hashed,
   role: 'student',
-  username: req.body.email.split('@')[0], // Generate a unique username based on the email
 });
 
   await user.save();

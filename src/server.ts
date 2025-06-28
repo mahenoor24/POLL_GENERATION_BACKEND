@@ -1,5 +1,7 @@
-import app from './app';
-import connectDB from './config/db';
+import mongoose from "mongoose";
+import app from "./app";
+import connectDB from "./config/db";
+import { userSchema } from "./models/user.model";
 
 const PORT = process.env.PORT || 5000;
 
