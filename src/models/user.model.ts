@@ -30,6 +30,7 @@ export const register = async (req: Request, res: Response) => {
   const user = await User.create({ fullName, email, password: hashed, role });
   const token = signToken({ id: user._id, role: user.role });
   res.status(201).json({ token, user: { id: user._id, fullName, email, role } });
+  
 };
 
 export const login = async (req: Request, res: Response) => {
