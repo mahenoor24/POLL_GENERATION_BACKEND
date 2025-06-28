@@ -1,9 +1,12 @@
 import { Request, Response } from 'express';
-import User from '../models/user.model';
+import {User} from '../models/user.model';
 import bcrypt from 'bcryptjs';
 import { signToken } from '../utils/jwt';
 import crypto from "crypto";
+import nodemailer from 'nodemailer';
 import { sendResetEmail } from "../utils/email";
+import { sendEmail } from '../utils/email';
+
 
 export const register = async (req: Request, res: Response) => {
   console.log("Register payload:", req.body);
@@ -12,9 +15,20 @@ export const register = async (req: Request, res: Response) => {
   if (existing) return res.status(400).json({ message: 'Email already exists' });
 
   const hashed = await bcrypt.hash(password, 10);
-  const user = await User.create({ fullName, email, password: hashed, role });
-  const token = signToken({ id: user._id, role: user.role });
-  res.status(201).json({ token, user: { id: user._id, fullName, email, role } });
+  const user = new User({
+  fullName: req.body.fullName,
+  email: req.body.email,
+  password: hashed,
+  role: 'student',
+  username: req.body.email.split('@')[0], // Generate a unique username based on the email
+});
+
+  await user.save();
+  const subject = 'Welcome to Automatic Poll Generation System';
+  const html = `<p>Dear ${user.fullName},</p><p>Welcome to Automatic Poll Generation System. We are excited to have you on board!</p>`;
+  await sendEmail(user.email, subject, html);
+
+  res.status(201).json({ message: 'User created successfully' });
 };
 
 export const login = async (req: Request, res: Response) => {
@@ -52,13 +66,16 @@ export const resetPassword = async (req: Request, res: Response) => {
   const { token, password } = req.body;
   const user = await User.findOne({ "passwordReset.token": token });
   if (!user) return res.status(400).json({ message: "Invalid or expired token" });
-  if (user.passwordReset.used) return res.status(400).json({ message: "Password reset link has already been used" });
-
-  user.password = await bcrypt.hash(password, 10);
+if (user.passwordReset && user.passwordReset.used) {
+  return res.status(400).json({ message: "Password reset link has already been used" });
+}
+user.password = await bcrypt.hash(password, 10);
+if (user.passwordReset) {
   user.passwordReset.used = true;
   user.passwordReset.token = undefined;
   user.passwordReset.expires = undefined;
-  await user.save();
+}
+await user.save();
 
   res.json({ message: "Password reset successful" });
 };
